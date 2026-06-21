@@ -67,5 +67,3 @@ Every strategy matrix entry handles the following schema properties under valida
 | end_date | String (ISO) | Optional | Target campaign termination and lifecycle end date. |
 | target_audience | String / Null | Optional | Demographic bracket parameters or user personas. |
 | status | String | Required | Current state cycle (Draft, Active, Paused, Completed). |
-
-<img width="1317" height="855" alt="Screenshot 2026-06-21 232648" src="https://github.com/user-attachments/assets/058dd54c-6a0e-4979-aa1f-4cd946bdea63" />
