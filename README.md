@@ -1,6 +1,6 @@
 # 🎯 Stratis | Marketing Campaign Manager
 
-Stratis is a marketing campaign manager built with a FastAPI backend and a Vanilla JS frontend. It lets you create, track, and manage campaigns with real-time filtering and automatic budget calculations — no external frameworks, no third-party libraries.
+Stratis is a marketing campaign manager built with a FastAPI backend and a Vanilla JS frontend. It lets you create, track, and manage campaigns with real-time filtering and automatic budget calculations - no external frameworks, no third-party libraries.
 
 ---
 
