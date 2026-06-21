@@ -12,7 +12,6 @@ Project Root Folder: Stratis
 
 Folder: backend
 File: server.py (Native Python HTTP server and database router)
-File: campaigns.db (Automatically initialized SQLite ledger)
 
 Folder: frontend
 File: index.html (Control panel layout and configuration views)
