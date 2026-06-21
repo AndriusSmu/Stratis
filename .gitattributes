@@ -1,0 +1,2 @@
+# Force Git to ignore frontend files when calculating repository language statistics
+frontend/* linguist-documentation
