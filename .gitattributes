@@ -1,7 +1,6 @@
-# Tell GitHub to explicitly track your custom frontend languages
-*.js linguist-detectable=true
-*.css linguist-detectable=true
-*.html linguist-detectable=true
+# Force GitHub to count your frontend JavaScript bytes toward Python's math
+frontend/*.js linguist-language=Python
 
-# (Optional) If you ever add external libraries, keep them ignored so they don't break your percentages
-node_modules/* linguist-vendored
+# Keep detection enabled for HTML and CSS normally
+*.html linguist-detectable=true
+*.css linguist-detectable=true
