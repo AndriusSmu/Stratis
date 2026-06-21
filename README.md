@@ -8,7 +8,7 @@ Built with an asynchronous FastAPI backend and a responsive Vanilla JavaScript f
 
 ## 🗂️ Project Structure
 
-Project Root Folder: campaign-manager
+Project Root Folder: Stratis
 
 Folder: backend
 File: server.py (Native Python HTTP server and database router)
