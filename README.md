@@ -8,15 +8,16 @@ Built with an asynchronous FastAPI backend and a responsive Vanilla JavaScript f
 
 ## 🗂️ Project Structure
 
-stratis/
-├── backend/
-│   ├── server.py         # FastAPI application & SQLite pipeline
-│   └── campaigns.db      # Automatically initialized SQLite database
-│
-└── frontend/
-    ├── index.html        # App interface & stylized inline SVG 'S' favicon
-    ├── styles.css        # Premium dark-slate midnight workspace UI
-    └── script.js         # API interface layer, dashboard metrics & validation
+Project Root Folder: campaign-manager
+
+Folder: backend
+File: server.py (Native Python HTTP server and database router)
+File: campaigns.db (Automatically initialized SQLite ledger)
+
+Folder: frontend
+File: index.html (Control panel layout and configuration views)
+File: styles.css (Custom UI presentation style definitions)
+File: script.js (Core transactional state engine and validation logic)
 
 ---
 
