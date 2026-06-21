@@ -1,2 +1,3 @@
 backend/campaigns.db
-*.db
+*.db**/__pycache__/ 
+*.pyc 
