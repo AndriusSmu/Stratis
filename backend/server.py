@@ -5,7 +5,7 @@ from typing import Optional, List
 import sqlite3
 
 # Updated Application branding to Stratis
-app = FastAPI(title="🎯 Stratis Marketing Engine")
+app = FastAPI(title="Stratis Marketing Engine")
 
 app.add_middleware(
     CORSMiddleware,
