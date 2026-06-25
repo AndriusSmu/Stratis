@@ -1,261 +1,365 @@
-﻿// frontend/script.js
+﻿const API_URL =
+    window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"
+        ? "http://localhost:8000"
+        : window.location.origin.replace(/\/$/, "");
 
-const API_URL = "http://localhost:8000";
+const form             = document.getElementById("campaign-form");
+const formTitle        = document.getElementById("form-title");
+const submitBtn        = document.getElementById("submit-btn");
+const cancelBtn        = document.getElementById("cancel-btn");
+const campaignIdInput  = document.getElementById("campaign-id");
 
-// --- DOM REFS ---
-const form = document.getElementById("campaign-form");
-const formTitle = document.getElementById("form-title");
-const submitBtn = document.getElementById("submit-btn");
-const cancelBtn = document.getElementById("cancel-btn");
-const campaignIdInput = document.getElementById("campaign-id");
-
-const nameInput = document.getElementById("name");
+const nameInput        = document.getElementById("name");
+const ownerInput       = document.getElementById("owner");
 const descriptionInput = document.getElementById("description");
-const budgetInput = document.getElementById("budget");
-const currencyInput = document.getElementById("currency");
-const startDateInput = document.getElementById("start-date");
-const endDateInput = document.getElementById("end-date");
+const budgetInput      = document.getElementById("budget");
+const spentInput       = document.getElementById("spent");
+const currencyInput    = document.getElementById("currency");
+const startDateInput   = document.getElementById("start-date");
+const endDateInput     = document.getElementById("end-date");
 const targetAudienceInput = document.getElementById("target-audience");
-const statusInput = document.getElementById("status");
+const statusInput      = document.getElementById("status");
+const tagsInput        = document.getElementById("tags");
+const assetsInput      = document.getElementById("assets");
+const notesInput       = document.getElementById("notes");
 
-const campaignListDiv = document.getElementById("campaign-list");
-const statusFilter = document.getElementById("status-filter");
-const searchFilter = document.getElementById("search-filter");
+const campaignListDiv  = document.getElementById("campaign-list");
+const statusFilter     = document.getElementById("status-filter");
+const searchFilter     = document.getElementById("search-filter");
 
-const activeBudgetEl = document.getElementById("active-budget");
-const totalBudgetEl = document.getElementById("total-budget");
+const activeBudgetEl   = document.getElementById("active-budget");
+const totalBudgetEl    = document.getElementById("total-budget");
+const totalSpentEl     = document.getElementById("total-spent");
+const expiredWarning   = document.getElementById("expired-warning");
+const expiredText      = document.getElementById("expired-text");
 
+const toastEl = document.getElementById("toast");
+let toastTimer;
 let allCampaigns = [];
 
-// --- API HELPERS ---
 async function fetchAPI(endpoint, options = {}) {
-    const response = await fetch(`${API_URL}${endpoint}`, {
-        headers: {
-            "Content-Type": "application/json",
-            ...(options.headers || {})
-        },
-        ...options
+    const res = await fetch(`${API_URL}${endpoint}`, {
+        headers: { "Content-Type": "application/json", ...(options.headers || {}) },
+        ...options,
     });
-
-    if (response.status === 204) return null;
-    if (!response.ok) {
-        const error = await response.json().catch(() => ({}));
-        throw new Error(error.detail || "Something went wrong");
+    if (res.status === 204) return null;
+    if (!res.ok) {
+        let msg = "Request failed";
+        try {
+            const err = await res.json();
+            if (err.detail) msg = err.detail;
+            else if (err.errors && Array.isArray(err.errors)) {
+                msg = err.errors.map(e => e.msg).join(", ");
+            }
+        } catch (_) {}
+        throw new Error(msg);
     }
-    return response.json();
+    return res.json();
 }
 
-// --- CALCULATION LOGIC ---
-function updateDashboardMetrics(campaigns) {
-    let activeTotal = 0;
-    let absoluteTotal = 0;
+function showToast(msg, isError = false) {
+    clearTimeout(toastTimer);
+    toastEl.textContent = msg;
+    toastEl.className = "toast show" + (isError ? " toast-error" : "");
+    toastTimer = setTimeout(() => { toastEl.className = "toast"; }, 3000);
+}
 
-    campaigns.forEach(c => {
-        const budgetVal = parseFloat(c.budget) || 0;
-        absoluteTotal += budgetVal;
-        if (c.status === "Active") {
-            activeTotal += budgetVal;
+async function loadStats() {
+    try {
+        const stats = await fetchAPI("/campaigns/stats");
+
+        activeBudgetEl.textContent = formatUSD(stats.active_budget_usd);
+        totalBudgetEl.textContent  = formatUSD(stats.total_budget_usd);
+        totalSpentEl.textContent   = formatUSD(stats.total_spent_usd);
+
+        ["Draft", "Active", "Paused", "Completed"].forEach(s => {
+            const el = document.getElementById(`count-${s}`);
+            if (el) el.textContent = stats.counts_by_status[s] ?? 0;
+        });
+
+        if (stats.expired_count > 0) {
+            expiredWarning.style.display = "flex";
+            expiredText.textContent = `${stats.expired_count} campaign${stats.expired_count > 1 ? "s" : ""} may have expired`;
+        } else {
+            expiredWarning.style.display = "none";
         }
-    });
-
-    activeBudgetEl.textContent = `$${activeTotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-    totalBudgetEl.textContent = `$${absoluteTotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    } catch (_) {}
 }
 
-// --- RENDER ---
-function renderCampaigns(campaigns, isFilteredView = false) {
-    if (!isFilteredView) {
-        allCampaigns = campaigns;
-        updateDashboardMetrics(campaigns);
-    }
+function renderCampaigns(campaigns, filtered = false) {
+    if (!filtered) allCampaigns = campaigns;
 
-    if (!campaigns || campaigns.length === 0) {
+    if (!campaigns.length) {
         campaignListDiv.innerHTML = `
             <div class="empty-state">
-                <span class="emoji">📭</span>
-                No strategies match query conditions.
-            </div>
-        `;
+                <span class="empty-state-icon">📭</span>
+                ${filtered ? "No campaigns match your filters." : "No campaigns yet. Create one to get started."}
+            </div>`;
         return;
     }
 
-    let html = "";
-    for (const c of campaigns) {
-        html += `
-            <div class="campaign-item" data-id="${c.id}">
-                <div class="campaign-info">
-                    <h3>
-                        ${c.name}
-                        <span class="status-badge status-${c.status}">${c.status}</span>
-                    </h3>
-                    ${c.description ? `<p class="description">${c.description}</p>` : ""}
-                    <div class="meta">
-                        <span class="budget">${c.currency} ${Number(c.budget).toFixed(2)}</span>
-                        <span>📅 ${formatDate(c.start_date)} ${c.end_date ? `→ ${formatDate(c.end_date)}` : ""}</span>
-                        ${c.target_audience ? `<span class="audience">🎯 ${c.target_audience}</span>` : ""}
+    campaignListDiv.innerHTML = campaigns.map(c => {
+        const currencySymbol = { USD: "$", EUR: "€", GBP: "£" }[c.currency] || c.currency;
+        const isNonUSD = c.currency !== "USD";
+        const usdNote = isNonUSD
+            ? `<span class="meta-usd-note">(≈ ${formatUSD(c.budget_usd)} USD)</span>`
+            : "";
+        const expiredTag = c.is_expired && c.status !== "Completed"
+            ? `<span class="expired-tag">Expired</span>`
+            : "";
+        const dateRange = c.start_date
+            ? `${formatDate(c.start_date)}${c.end_date ? ` → ${formatDate(c.end_date)}` : ""}`
+            : "";
+        const notesHtml = c.notes
+            ? `<div class="card-notes">${escapeHtml(c.notes)}</div>`
+            : "";
+        const descHtml = c.description
+            ? `<p class="card-description">${escapeHtml(c.description)}</p>`
+            : "";
+        const audienceHtml = c.target_audience
+            ? `<span>🎯 ${escapeHtml(c.target_audience)}</span>`
+            : "";
+        const ownerHtml = c.owner
+            ? `<span>👤 ${escapeHtml(c.owner)}</span>`
+            : "";
+        const tagsHtml = c.tags && c.tags.length
+            ? `<div class="card-tags">${c.tags.map(t => `<span class="tag-pill">${escapeHtml(t)}</span>`).join("")}</div>`
+            : "";
+        const assetsHtml = c.assets
+            ? `<div class="card-assets">${escapeHtml(c.assets)}</div>`
+            : "";
+
+        const spent = Number(c.spent || 0);
+        const remaining = Number(c.remaining || 0);
+        const progress = Number(c.progress_pct || 0);
+
+        const budgetLine = `${currencySymbol}${Number(c.budget).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+        const spentLine = `${currencySymbol}${spent.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+        const remainingLine = `${currencySymbol}${remaining.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+        return `
+            <div class="campaign-card status-${c.status}" data-id="${c.id}">
+                <div class="card-top">
+                    <span class="card-name">${escapeHtml(c.name)}${expiredTag}</span>
+                    <span class="status-badge badge-${c.status}">${c.status}</span>
+                </div>
+                ${descHtml}
+                <div class="card-meta">
+                    <span class="meta-budget">Budget: ${budgetLine}</span>
+                    <span class="meta-spent">Spent: ${spentLine}</span>
+                    <span class="meta-remaining">Remaining: ${remainingLine}</span>
+                    ${usdNote}
+                    ${dateRange ? `<span>📅 ${dateRange}</span>` : ""}
+                    ${audienceHtml}
+                    ${ownerHtml}
+                </div>
+                <div class="progress-row">
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width:${progress}%"></div>
                     </div>
+                    <span class="progress-label">${progress.toFixed(1)}%</span>
                 </div>
-                <div class="campaign-actions">
-                    <button class="btn btn-edit" onclick="editCampaign(${c.id})">✏️ Review</button>
-                    <button class="btn btn-delete" onclick="deleteCampaign(${c.id})">🗑️ Wipe</button>
+                ${tagsHtml}
+                ${assetsHtml}
+                ${notesHtml}
+                <div class="card-actions">
+                    <button class="btn-action btn-edit"  onclick="editCampaign(${c.id})">Edit</button>
+                    <button class="btn-action btn-clone" onclick="cloneCampaign(${c.id})">Duplicate</button>
+                    <button class="btn-action btn-delete" onclick="deleteCampaign(${c.id})">Delete</button>
                 </div>
-            </div>
-        `;
-    }
-
-    campaignListDiv.innerHTML = html;
-}
-
-function formatDate(dateStr) {
-    if (!dateStr) return "-";
-    const d = new Date(dateStr);
-    return d.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" });
+            </div>`;
+    }).join("");
 }
 
 async function loadCampaigns() {
     try {
         const data = await fetchAPI("/campaigns");
         renderCampaigns(data || []);
-    } catch (error) {
+        applyFilters();
+    } catch (err) {
         campaignListDiv.innerHTML = `
             <div class="empty-state">
-                <span class="emoji">❌</span>
-                Failed linking backend index grid:<br />${error.message}
-            </div>
-        `;
+                <span class="empty-state-icon">⚠️</span>
+                Couldn't reach the backend.<br><small>${escapeHtml(err.message)}</small>
+            </div>`;
     }
 }
 
-// --- FILTERS & DEBOUNCE ---
+async function refreshAll() {
+    await Promise.all([loadCampaigns(), loadStats()]);
+}
+
 function applyFilters() {
     const status = statusFilter.value;
     const search = searchFilter.value.toLowerCase().trim();
 
-    let filtered = [...allCampaigns];
+    let result = [...allCampaigns];
+    if (status) result = result.filter(c => c.status === status);
+    if (search) result = result.filter(c =>
+        c.name.toLowerCase().includes(search) ||
+        (c.description && c.description.toLowerCase().includes(search)) ||
+        (c.target_audience && c.target_audience.toLowerCase().includes(search)) ||
+        (c.notes && c.notes.toLowerCase().includes(search)) ||
+        (c.owner && c.owner.toLowerCase().includes(search)) ||
+        (c.tags && c.tags.join(" ").toLowerCase().includes(search))
+    );
 
-    if (status) {
-        filtered = filtered.filter(c => c.status === status);
-    }
-
-    if (search) {
-        filtered = filtered.filter(c =>
-            c.name.toLowerCase().includes(search) ||
-            (c.description && c.description.toLowerCase().includes(search)) ||
-            (c.target_audience && c.target_audience.toLowerCase().includes(search))
-        );
-    }
-
-    renderCampaigns(filtered, true);
+    renderCampaigns(result, true);
 }
 
-function debounce(func, delay = 200) {
-    let timer;
-    return (...args) => {
-        clearTimeout(timer);
-        timer = setTimeout(() => func.apply(this, args), delay);
-    };
+function debounce(fn, ms = 200) {
+    let t;
+    return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), ms); };
 }
 
 statusFilter.addEventListener("change", applyFilters);
 searchFilter.addEventListener("input", debounce(applyFilters));
 
-// --- MUTATIONS + CHRONOLOGICAL ORDER SAFEGUARD ---
 form.addEventListener("submit", async (e) => {
     e.preventDefault();
 
     const startVal = startDateInput.value;
-    const endVal = endDateInput.value;
+    const endVal   = endDateInput.value;
 
-    // Direct UX validation: prevents upside-down system timelines
     if (endVal && new Date(endVal) < new Date(startVal)) {
-        alert("❌ Timeline Conflict Error: The Strategy termination date cannot exist before the active deployment date.");
+        showToast("End date cannot be before start date.", true);
         return;
     }
 
-    const data = {
-        name: nameInput.value.trim(),
-        description: descriptionInput.value.trim() || null,
-        budget: parseFloat(budgetInput.value),
-        currency: currencyInput.value,
-        start_date: startVal,
-        end_date: endVal || null,
+    const tags = tagsInput.value
+        ? tagsInput.value.split(",").map(t => t.trim()).filter(Boolean)
+        : [];
+
+    const payload = {
+        name:            nameInput.value.trim(),
+        owner:           ownerInput.value.trim() || null,
+        description:     descriptionInput.value.trim() || null,
+        budget:          parseFloat(budgetInput.value),
+        spent:           spentInput.value ? parseFloat(spentInput.value) : 0,
+        currency:        currencyInput.value,
+        start_date:      startVal,
+        end_date:        endVal || null,
         target_audience: targetAudienceInput.value.trim() || null,
-        status: statusInput.value
+        status:          statusInput.value,
+        tags:            tags.length ? tags : null,
+        assets:          assetsInput.value.trim() || null,
+        notes:           notesInput.value.trim() || null,
     };
 
     const isEditing = campaignIdInput.value !== "";
-    const id = campaignIdInput.value;
+    const id        = campaignIdInput.value;
+
+    submitBtn.disabled = true;
+    submitBtn.textContent = isEditing ? "Saving..." : "Creating...";
 
     try {
         if (isEditing) {
-            await fetchAPI(`/campaigns/${id}`, {
-                method: "PUT",
-                body: JSON.stringify(data)
-            });
+            await fetchAPI(`/campaigns/${id}`, { method: "PUT", body: JSON.stringify(payload) });
+            showToast("Campaign updated.");
         } else {
-            await fetchAPI("/campaigns", {
-                method: "POST",
-                body: JSON.stringify(data)
-            });
+            await fetchAPI("/campaigns", { method: "POST", body: JSON.stringify(payload) });
+            showToast("Campaign created.");
         }
-
         resetForm();
-        await loadCampaigns();
-    } catch (error) {
-        alert(`❌ Strategy Processing Fault: ${error.message}`);
+        await refreshAll();
+    } catch (err) {
+        showToast(err.message, true);
+    } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = isEditing ? "Save changes" : "Create campaign";
     }
 });
 
-// --- ACTIONS ---
 async function editCampaign(id) {
     try {
         const c = await fetchAPI(`/campaigns/${id}`);
+        campaignIdInput.value      = c.id;
+        nameInput.value            = c.name;
+        ownerInput.value           = c.owner || "";
+        descriptionInput.value     = c.description || "";
+        budgetInput.value          = c.budget;
+        spentInput.value           = c.spent || "";
+        currencyInput.value        = c.currency;
+        startDateInput.value       = c.start_date;
+        endDateInput.value         = c.end_date || "";
+        targetAudienceInput.value  = c.target_audience || "";
+        statusInput.value          = c.status;
+        tagsInput.value            = c.tags && c.tags.length ? c.tags.join(", ") : "";
+        assetsInput.value          = c.assets || "";
+        notesInput.value           = c.notes || "";
 
-        campaignIdInput.value = c.id;
-        nameInput.value = c.name;
-        descriptionInput.value = c.description || "";
-        budgetInput.value = c.budget;
-        currencyInput.value = c.currency;
-        startDateInput.value = c.start_date;
-        endDateInput.value = c.end_date || "";
-        targetAudienceInput.value = c.target_audience || "";
-        statusInput.value = c.status;
+        formTitle.textContent      = "Edit campaign";
+        submitBtn.textContent      = "Save changes";
+        cancelBtn.style.display    = "inline-block";
 
-        formTitle.textContent = "✏️ Modify System Matrix";
-        submitBtn.textContent = "💾 Push System Adjustments";
-        cancelBtn.style.display = "inline-block";
+        window.scrollTo({ top: 0, behavior: "smooth" });
+    } catch (err) {
+        showToast(err.message, true);
+    }
+}
 
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-    } catch (error) {
-        alert(`❌ Context Fetch Interruption: ${error.message}`);
+async function cloneCampaign(id) {
+    try {
+        await fetchAPI(`/campaigns/${id}/duplicate`, { method: "POST" });
+        showToast("Campaign duplicated as Draft.");
+        await refreshAll();
+        window.scrollTo({ top: 0, behavior: "smooth" });
+    } catch (err) {
+        showToast(err.message, true);
     }
 }
 
 async function deleteCampaign(id) {
-    if (!confirm("Confirm complete tracking annihilation of this system matrix registry?")) return;
-
+    if (!confirm("Delete this campaign? This cannot be undone.")) return;
     try {
         await fetchAPI(`/campaigns/${id}`, { method: "DELETE" });
-        await loadCampaigns();
-    } catch (error) {
-        alert(`❌ Deletion Fault Error: ${error.message}`);
+        showToast("Campaign deleted.");
+        await refreshAll();
+    } catch (err) {
+        showToast(err.message, true);
     }
+}
+
+function exportCSV() {
+    const a = document.createElement("a");
+    a.href = `${API_URL}/campaigns/export`;
+    a.download = "";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    showToast("Downloading CSV...");
+}
+
+function resetForm() {
+    form.reset();
+    campaignIdInput.value   = "";
+    formTitle.textContent   = "New campaign";
+    submitBtn.textContent   = "Create campaign";
+    cancelBtn.style.display = "none";
+    startDateInput.value    = todayISO();
 }
 
 cancelBtn.addEventListener("click", resetForm);
 
-function resetForm() {
-    form.reset();
-    campaignIdInput.value = "";
-    formTitle.textContent = "➕ Create Strategy Matrix";
-    submitBtn.textContent = "➕ Deploy Campaign";
-    cancelBtn.style.display = "none";
-
-    const today = new Date().toISOString().split("T")[0];
-    startDateInput.value = today;
+function todayISO() {
+    return new Date().toISOString().split("T")[0];
 }
 
-// --- INIT ---
-const today = new Date().toISOString().split("T")[0];
-startDateInput.value = today;
-loadCampaigns();
+function formatDate(str) {
+    if (!str) return "";
+    const d = new Date(str + "T00:00:00");
+    return d.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" });
+}
+
+function formatUSD(val) {
+    return "$" + Number(val).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function escapeHtml(str) {
+    const d = document.createElement("div");
+    d.textContent = str;
+    return d.innerHTML;
+}
+
+startDateInput.value = todayISO();
+refreshAll();

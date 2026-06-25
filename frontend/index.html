@@ -3,128 +3,179 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Stratis | Marketing Command Console</title>
-    <!-- Dynamic high-tech S icon vector favicon -->
-    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' fill='%231e293b'/%3E%3Cpath d='M30,35 C30,25 70,25 70,35 C70,45 30,45 30,55 C30,65 70,65 70,55' fill='none' stroke='%2338bdf8' stroke-width='12' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E" />
+    <title>Stratis | Campaign Manager</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,700;1,9..40,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-    <div class="container">
-        <header>
-            <div class="logo-area">
-                <svg class="header-logo" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="40" height="40"><rect width="100" height="100" rx="20" fill="#0284c7" /><path d="M30,35 C30,25 70,25 70,35 C70,45 30,45 30,55 C30,65 70,65 70,55" fill="none" stroke="#ffffff" stroke-width="12" stroke-linecap="round" stroke-linejoin="round" /></svg>
-                <h1>Stratis</h1>
+
+    <div class="shell">
+
+        <aside class="sidebar">
+            <div class="sidebar-brand">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="28" height="28" class="brand-mark">
+                    <rect width="100" height="100" rx="16" fill="#0ea5e9" />
+                    <path d="M30,35 C30,25 70,25 70,35 C70,45 30,45 30,55 C30,65 70,65 70,55" fill="none" stroke="#fff" stroke-width="13" stroke-linecap="round" />
+                </svg>
+                <span class="brand-name">Stratis</span>
             </div>
-            <p>Unified Marketing Strategic Control Console</p>
-        </header>
 
-        <!-- Dynamic Two-Column Layout Grid -->
-        <div class="app-workspace">
+            <div class="sidebar-stats">
+                <div class="stat-row">
+                    <span class="stat-label">Active budget</span>
+                    <span class="stat-num" id="active-budget">—</span>
+                </div>
+                <div class="stat-divider"></div>
+                <div class="stat-row">
+                    <span class="stat-label">Total footprint</span>
+                    <span class="stat-num" id="total-budget">—</span>
+                </div>
+                <div class="stat-divider"></div>
+                <div class="stat-row">
+                    <span class="stat-label">Total spent</span>
+                    <span class="stat-num" id="total-spent">—</span>
+                </div>
+                <div class="stat-divider"></div>
+                <div class="status-counts" id="status-counts">
+                    <div class="count-row"><span class="dot dot-draft"></span><span class="count-label">Draft</span><span class="count-val" id="count-Draft">0</span></div>
+                    <div class="count-row"><span class="dot dot-Active"></span><span class="count-label">Active</span><span class="count-val" id="count-Active">0</span></div>
+                    <div class="count-row"><span class="dot dot-Paused"></span><span class="count-label">Paused</span><span class="count-val" id="count-Paused">0</span></div>
+                    <div class="count-row"><span class="dot dot-Completed"></span><span class="count-label">Completed</span><span class="count-val" id="count-Completed">0</span></div>
+                </div>
+            </div>
 
-            <!-- Left Panel: Context Action Form -->
-            <div class="panel-left">
-                <div class="card form-card">
-                    <h2 id="form-title">➕ Create Strategy Matrix</h2>
-                    <form id="campaign-form">
-                        <input type="hidden" id="campaign-id" />
+            <div class="expired-warning" id="expired-warning" style="display:none;">
+                <span class="warn-icon">⚠</span>
+                <span id="expired-text">campaigns may be expired</span>
+            </div>
 
-                        <div class="form-group">
-                            <label for="name">Campaign Matrix Name *</label>
-                            <input type="text" id="name" placeholder="e.g., Q3 Global Expansion 2026" required />
+            <button class="btn-export" onclick="exportCSV()">
+                Export CSV
+            </button>
+
+            <div class="sidebar-note">All budgets shown in USD equivalent</div>
+        </aside>
+
+        <main class="main">
+
+            <section class="form-panel">
+                <div class="form-header">
+                    <h2 id="form-title">New campaign</h2>
+                </div>
+
+                <form id="campaign-form" autocomplete="off">
+                    <input type="hidden" id="campaign-id" />
+
+                    <div class="field">
+                        <label for="name">Campaign name <span class="required">*</span></label>
+                        <input type="text" id="name" required />
+                    </div>
+
+                    <div class="field">
+                        <label for="owner">Owner / responsible</label>
+                        <input type="text" id="owner" placeholder="e.g. andrius@company.com" />
+                    </div>
+
+                    <div class="field">
+                        <label for="description">Description</label>
+                        <textarea id="description" rows="3"></textarea>
+                    </div>
+
+                    <div class="field-row">
+                        <div class="field">
+                            <label for="budget">Budget <span class="required">*</span></label>
+                            <input type="number" id="budget" step="0.01" required />
                         </div>
-
-                        <div class="form-group">
-                            <label for="description">Strategic Description</label>
-                            <textarea id="description" placeholder="Specify tactical goals or primary channels..." rows="3"></textarea>
+                        <div class="field">
+                            <label for="spent">Spent</label>
+                            <input type="number" id="spent" step="0.01" />
                         </div>
+                    </div>
 
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label for="budget">Allocated Budget *</label>
-                                <input type="number" id="budget" step="0.01" placeholder="0.00" required />
-                            </div>
-                            <div class="form-group">
-                                <label for="currency">Currency Matrix</label>
-                                <select id="currency">
-                                    <option value="USD">USD ($)</option>
-                                    <option value="EUR">EUR (€)</option>
-                                    <option value="GBP">GBP (£)</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label for="start-date">Activation Date *</label>
-                                <input type="date" id="start-date" required />
-                            </div>
-                            <div class="form-group">
-                                <label for="end-date">Termination Date</label>
-                                <input type="date" id="end-date" />
-                            </div>
-                        </div>
-
-                        <div class="form-group">
-                            <label for="target-audience">Target Core Audience</label>
-                            <input type="text" id="target-audience" placeholder="e.g., Tech decision-makers 30-50" />
-                        </div>
-
-                        <div class="form-group">
-                            <label for="status">Deployment Phase State</label>
-                            <select id="status">
-                                <option value="Draft">📝 Draft Mode</option>
-                                <option value="Active">🚀 Live Deployment</option>
-                                <option value="Paused">⏸️ Execution Paused</option>
-                                <option value="Completed">✅ Concluded</option>
+                    <div class="field-row">
+                        <div class="field">
+                            <label for="currency">Currency</label>
+                            <select id="currency">
+                                <option value="USD">USD ($)</option>
+                                <option value="EUR">EUR (€)</option>
+                                <option value="GBP">GBP (£)</option>
                             </select>
                         </div>
+                        <div class="field">
+                            <label for="tags">Tags (comma-separated)</label>
+                            <input type="text" id="tags" placeholder="EMEA, LinkedIn, Azure" />
+                        </div>
+                    </div>
 
-                        <div class="form-actions">
-                            <button type="submit" id="submit-btn" class="btn btn-primary">➕ Deploy Campaign</button>
-                            <button type="button" id="cancel-btn" class="btn btn-secondary" style="display: none;">❌ Clear Focus</button>
+                    <div class="field-row">
+                        <div class="field">
+                            <label for="start-date">Start date <span class="required">*</span></label>
+                            <input type="date" id="start-date" required />
                         </div>
-                    </form>
-                </div>
-            </div>
+                        <div class="field">
+                            <label for="end-date">End date</label>
+                            <input type="date" id="end-date" />
+                        </div>
+                    </div>
 
-            <!-- Right Panel: Aggregations & Database Feed -->
-            <div class="panel-right">
-                <div class="card dashboard-card">
-                    <h2>📈 Active Allocation Status (USD)</h2>
-                    <div class="stats-grid">
-                        <div class="stat-box">
-                            <span class="stat-label">Live Active Operations</span>
-                            <span class="stat-value" id="active-budget">$0.00</span>
-                        </div>
-                        <div class="stat-box">
-                            <span class="stat-label">Total Strategy Footprint</span>
-                            <span class="stat-value" id="total-budget">$0.00</span>
-                        </div>
+                    <div class="field">
+                        <label for="target-audience">Target audience</label>
+                        <input type="text" id="target-audience" />
+                    </div>
+
+                    <div class="field">
+                        <label for="status">Status</label>
+                        <select id="status">
+                            <option value="Draft">Draft</option>
+                            <option value="Active">Active</option>
+                            <option value="Paused">Paused</option>
+                            <option value="Completed">Completed</option>
+                        </select>
+                    </div>
+
+                    <div class="field">
+                        <label for="assets">Assets / files (links)</label>
+                        <textarea id="assets" rows="2" placeholder="Links to briefs, media plans, creatives..."></textarea>
+                    </div>
+
+                    <div class="field">
+                        <label for="notes">Notes / Results</label>
+                        <textarea id="notes" rows="2"></textarea>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="submit" id="submit-btn" class="btn btn-primary">Create campaign</button>
+                        <button type="button" id="cancel-btn" class="btn btn-ghost" style="display:none;">Cancel</button>
+                    </div>
+                </form>
+            </section>
+
+            <section class="list-panel">
+                <div class="list-top">
+                    <h2>Campaigns</h2>
+                    <div class="filters">
+                        <select id="status-filter">
+                            <option value="">All statuses</option>
+                            <option value="Draft">Draft</option>
+                            <option value="Active">Active</option>
+                            <option value="Paused">Paused</option>
+                            <option value="Completed">Completed</option>
+                        </select>
+                        <input type="text" id="search-filter" placeholder="Search..." />
                     </div>
                 </div>
 
-                <div class="card list-card">
-                    <div class="list-header">
-                        <h2>📋 Strategy Registries</h2>
-                        <div class="filters">
-                            <select id="status-filter">
-                                <option value="">All Matrix Phases</option>
-                                <option value="Draft">Draft Mode</option>
-                                <option value="Active">Live Deployment</option>
-                                <option value="Paused">Execution Paused</option>
-                                <option value="Completed">Concluded</option>
-                            </select>
-                            <input type="text" id="search-filter" placeholder="🔍 Filter Registry..." />
-                        </div>
-                    </div>
-                    <div id="campaign-list">
-                        <div class="loading">Parsing local database clusters...</div>
-                    </div>
+                <div id="campaign-list">
+                    <div class="loading-state">Loading campaigns...</div>
                 </div>
-            </div>
+            </section>
 
-        </div>
+        </main>
     </div>
+
+    <div id="toast" class="toast" aria-live="polite"></div>
 
     <script src="script.js"></script>
 </body>
