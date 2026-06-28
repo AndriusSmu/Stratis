@@ -1,6 +1,6 @@
 # 🎯 Stratis | Marketing Campaign Manager
 
-Stratis is a marketing campaign manager built with a FastAPI backend and a Vanilla JS frontend. It lets you create, track, and manage campaigns with real-time filtering, automatic budget calculations, and AI-powered campaign briefs — no external frameworks, no third-party dependencies.
+Stratis is a marketing campaign manager built with a FastAPI backend and a Vanilla JS frontend. It lets you create, track, and manage campaigns with real-time filtering, automatic budget calculations, and AI-powered campaign briefs - no external frameworks, no third-party dependencies.
 
 ---
 
@@ -53,8 +53,8 @@ INFO:     Uvicorn running on http://127.0.0.1:8000
 
 Stratis includes two AI-powered features powered by [Ollama](https://ollama.com) running locally:
 
-- **Campaign brief generator** — enter a campaign name and target audience, click Generate, and AI fills in the description, tags, and notes
-- **Portfolio insights** — click "Analyze campaigns" in the sidebar to get an AI summary of your campaign portfolio health
+- **Campaign brief generator** - enter a campaign name and target audience, click Generate, and AI fills in the description, tags, and notes
+- **Portfolio insights** - click "Analyze campaigns" in the sidebar to get an AI summary of your campaign portfolio health
 
 ### Setup
 
