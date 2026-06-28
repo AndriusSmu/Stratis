@@ -7,10 +7,14 @@ import sqlite3
 import os
 import csv
 import io
+import json
+import urllib.request
 from datetime import date, datetime
 
 # ---------- CONFIG ----------
 DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "campaigns.db")
+OLLAMA_URL = "http://localhost:11434/api/generate"
+OLLAMA_MODEL = "llama3.2"
 
 # ---------- APP SETUP ----------
 app = FastAPI(title="Stratis Marketing Engine")
@@ -43,7 +47,7 @@ class CampaignSchema(BaseModel):
     status: Literal["Draft", "Active", "Paused", "Completed"] = "Draft"
     owner: Optional[str] = None
     tags: Optional[List[str]] = None
-    assets: Optional[str] = None  # links / files description
+    assets: Optional[str] = None
     notes: Optional[str] = None
 
 class CampaignResponse(CampaignSchema):
@@ -59,6 +63,16 @@ class DashboardStats(BaseModel):
     total_spent_usd: float
     counts_by_status: dict
     expired_count: int
+
+# ---------- AI MODELS ----------
+class BriefRequest(BaseModel):
+    name: str
+    target_audience: Optional[str] = None
+    budget: Optional[float] = None
+    currency: Optional[str] = "USD"
+
+class InsightsRequest(BaseModel):
+    campaigns: List[dict]
 
 # ---------- DATABASE ----------
 def init_db():
@@ -151,11 +165,101 @@ def auto_update_expired_statuses(db: sqlite3.Connection):
     )
     db.commit()
 
+def ollama_generate(prompt: str) -> str:
+    """Send a prompt to Ollama and return the full response text."""
+    payload = json.dumps({
+        "model": OLLAMA_MODEL,
+        "prompt": prompt,
+        "stream": False
+    }).encode("utf-8")
+
+    req = urllib.request.Request(
+        OLLAMA_URL,
+        data=payload,
+        headers={"Content-Type": "application/json"},
+        method="POST"
+    )
+
+    try:
+        with urllib.request.urlopen(req, timeout=60) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+            return data.get("response", "").strip()
+    except Exception as e:
+        raise HTTPException(status_code=503, detail=f"Ollama unavailable: {str(e)}")
+
 # ---------- ROUTES ----------
 @app.get("/", tags=["Root"])
 def root():
     return {"message": "Stratis API Engine Operating Nominally."}
 
+
+# ---------- AI ROUTES ----------
+@app.post("/ai/brief", tags=["AI"])
+def generate_brief(req: BriefRequest):
+    """Generate a campaign brief using Ollama."""
+    budget_info = f" with a budget of {req.budget} {req.currency}" if req.budget else ""
+    audience_info = f" targeting {req.target_audience}" if req.target_audience else ""
+
+    prompt = f"""You are a marketing strategist. Generate a brief for a campaign called "{req.name}"{audience_info}{budget_info}.
+
+Respond ONLY with a JSON object in this exact format, no extra text:
+{{
+  "description": "2-3 sentence campaign description",
+  "tags": ["tag1", "tag2", "tag3"],
+  "notes": "1-2 sentences on key goals or success metrics"
+}}"""
+
+    raw = ollama_generate(prompt)
+
+    try:
+        # Strip markdown code fences if present
+        clean = raw.strip()
+        if clean.startswith("```"):
+            clean = "\n".join(clean.split("\n")[1:])
+        if clean.endswith("```"):
+            clean = "\n".join(clean.split("\n")[:-1])
+        result = json.loads(clean.strip())
+        return result
+    except Exception:
+        return {"description": raw, "tags": [], "notes": ""}
+
+
+@app.post("/ai/insights", tags=["AI"])
+def generate_insights(req: InsightsRequest):
+    """Generate campaign health insights using Ollama."""
+    if not req.campaigns:
+        return {"insights": "No campaigns to analyze."}
+
+    summary_lines = []
+    for c in req.campaigns:
+        line = (
+            f"- \"{c.get('name')}\" | Status: {c.get('status')} | "
+            f"Budget: {c.get('budget')} {c.get('currency')} | "
+            f"Spent: {c.get('spent', 0)} | "
+            f"Progress: {c.get('progress_pct', 0)}% | "
+            f"Expired: {c.get('is_expired', False)}"
+        )
+        summary_lines.append(line)
+
+    campaigns_text = "\n".join(summary_lines)
+
+    prompt = f"""You are a marketing analyst. Here is a summary of active marketing campaigns:
+
+{campaigns_text}
+
+Write a short, direct health report (3-5 sentences). Mention:
+- Any campaigns that are over budget or nearly spent
+- Any expired campaigns still marked active
+- Overall portfolio health
+- One concrete recommendation
+
+Be direct and specific. No bullet points, just plain sentences."""
+
+    insights = ollama_generate(prompt)
+    return {"insights": insights}
+
+
+# ---------- DASHBOARD ----------
 @app.get("/campaigns/stats", response_model=DashboardStats, tags=["Dashboard"])
 def get_stats(db: sqlite3.Connection = Depends(get_db)):
     auto_update_expired_statuses(db)
@@ -189,6 +293,8 @@ def get_stats(db: sqlite3.Connection = Depends(get_db)):
         expired_count=expired_count,
     )
 
+
+# ---------- EXPORT ----------
 @app.get("/campaigns/export", tags=["Export"])
 def export_campaigns_csv(db: sqlite3.Connection = Depends(get_db)):
     c = db.cursor()
@@ -217,6 +323,8 @@ def export_campaigns_csv(db: sqlite3.Connection = Depends(get_db)):
         headers={"Content-Disposition": f"attachment; filename={filename}"}
     )
 
+
+# ---------- CAMPAIGNS CRUD ----------
 @app.get("/campaigns", response_model=List[CampaignResponse], tags=["Campaigns"])
 def get_all_campaigns(db: sqlite3.Connection = Depends(get_db)):
     auto_update_expired_statuses(db)

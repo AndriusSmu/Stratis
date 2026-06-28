@@ -39,7 +39,7 @@
                 </div>
                 <div class="stat-divider"></div>
                 <div class="status-counts" id="status-counts">
-                    <div class="count-row"><span class="dot dot-draft"></span><span class="count-label">Draft</span><span class="count-val" id="count-Draft">0</span></div>
+                    <div class="count-row"><span class="dot dot-Draft"></span><span class="count-label">Draft</span><span class="count-val" id="count-Draft">0</span></div>
                     <div class="count-row"><span class="dot dot-Active"></span><span class="count-label">Active</span><span class="count-val" id="count-Active">0</span></div>
                     <div class="count-row"><span class="dot dot-Paused"></span><span class="count-label">Paused</span><span class="count-val" id="count-Paused">0</span></div>
                     <div class="count-row"><span class="dot dot-Completed"></span><span class="count-label">Completed</span><span class="count-val" id="count-Completed">0</span></div>
@@ -49,6 +49,20 @@
             <div class="expired-warning" id="expired-warning" style="display:none;">
                 <span class="warn-icon">⚠</span>
                 <span id="expired-text">campaigns may be expired</span>
+            </div>
+
+            <!-- AI INSIGHTS -->
+            <div class="ai-insights-block">
+                <div class="ai-insights-header">
+                    <span class="ai-badge">AI</span>
+                    <span class="ai-insights-title">Portfolio insights</span>
+                </div>
+                <div class="ai-insights-body" id="ai-insights-body">
+                    <span class="ai-insights-placeholder">Run analysis to see AI insights.</span>
+                </div>
+                <button class="btn-ai-insights" id="btn-ai-insights" onclick="runInsights()">
+                    Analyze campaigns
+                </button>
             </div>
 
             <button class="btn-export" onclick="exportCSV()">
@@ -79,8 +93,8 @@
                     </div>
 
                     <div class="field">
-                        <label for="description">Description</label>
-                        <textarea id="description" rows="3"></textarea>
+                        <label for="target-audience">Target audience</label>
+                        <input type="text" id="target-audience" />
                     </div>
 
                     <div class="field-row">
@@ -89,13 +103,6 @@
                             <input type="number" id="budget" step="0.01" required />
                         </div>
                         <div class="field">
-                            <label for="spent">Spent</label>
-                            <input type="number" id="spent" step="0.01" />
-                        </div>
-                    </div>
-
-                    <div class="field-row">
-                        <div class="field">
                             <label for="currency">Currency</label>
                             <select id="currency">
                                 <option value="USD">USD ($)</option>
@@ -103,10 +110,26 @@
                                 <option value="GBP">GBP (£)</option>
                             </select>
                         </div>
-                        <div class="field">
-                            <label for="tags">Tags (comma-separated)</label>
-                            <input type="text" id="tags" placeholder="EMEA, LinkedIn, Azure" />
-                        </div>
+                    </div>
+
+                    <!-- AI BRIEF GENERATOR -->
+                    <div class="ai-brief-bar">
+                        <span class="ai-badge">AI</span>
+                        <span class="ai-brief-label">Generate brief from name &amp; audience</span>
+                        <button type="button" class="btn-generate-brief" id="btn-generate-brief" onclick="generateBrief()">
+                            Generate
+                        </button>
+                    </div>
+                    <div class="ai-brief-status" id="ai-brief-status" style="display:none;"></div>
+
+                    <div class="field">
+                        <label for="description">Description</label>
+                        <textarea id="description" rows="3"></textarea>
+                    </div>
+
+                    <div class="field">
+                        <label for="tags">Tags (comma-separated)</label>
+                        <input type="text" id="tags" placeholder="EMEA, LinkedIn, Azure" />
                     </div>
 
                     <div class="field-row">
@@ -121,8 +144,8 @@
                     </div>
 
                     <div class="field">
-                        <label for="target-audience">Target audience</label>
-                        <input type="text" id="target-audience" />
+                        <label for="spent">Spent</label>
+                        <input type="number" id="spent" step="0.01" />
                     </div>
 
                     <div class="field">

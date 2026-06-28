@@ -86,6 +86,80 @@ async function loadStats() {
     } catch (_) {}
 }
 
+// ---------- AI: BRIEF GENERATOR ----------
+async function generateBrief() {
+    const name = nameInput.value.trim();
+    if (!name) {
+        showToast("Enter a campaign name first.", true);
+        return;
+    }
+
+    const btn = document.getElementById("btn-generate-brief");
+    const statusEl = document.getElementById("ai-brief-status");
+
+    btn.disabled = true;
+    btn.textContent = "Generating...";
+    statusEl.style.display = "block";
+    statusEl.className = "ai-brief-status ai-brief-loading";
+    statusEl.textContent = "AI is writing your brief…";
+
+    try {
+        const result = await fetchAPI("/ai/brief", {
+            method: "POST",
+            body: JSON.stringify({
+                name,
+                target_audience: targetAudienceInput.value.trim() || null,
+                budget: budgetInput.value ? parseFloat(budgetInput.value) : null,
+                currency: currencyInput.value,
+            }),
+        });
+
+        if (result.description) descriptionInput.value = result.description;
+        if (result.tags && result.tags.length) tagsInput.value = result.tags.join(", ");
+        if (result.notes) notesInput.value = result.notes;
+
+        statusEl.className = "ai-brief-status ai-brief-success";
+        statusEl.textContent = "✓ Brief generated — review and adjust as needed.";
+        setTimeout(() => { statusEl.style.display = "none"; }, 4000);
+    } catch (err) {
+        statusEl.className = "ai-brief-status ai-brief-error";
+        statusEl.textContent = `⚠ ${err.message}. Is Ollama running?`;
+    } finally {
+        btn.disabled = false;
+        btn.textContent = "Generate";
+    }
+}
+
+// ---------- AI: INSIGHTS ----------
+async function runInsights() {
+    const btn = document.getElementById("btn-ai-insights");
+    const body = document.getElementById("ai-insights-body");
+
+    if (!allCampaigns.length) {
+        showToast("No campaigns to analyze.", true);
+        return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = "Analyzing...";
+    body.innerHTML = `<span class="ai-insights-loading">Analyzing your portfolio…</span>`;
+
+    try {
+        const result = await fetchAPI("/ai/insights", {
+            method: "POST",
+            body: JSON.stringify({ campaigns: allCampaigns }),
+        });
+
+        body.innerHTML = `<p class="ai-insights-text">${escapeHtml(result.insights)}</p>`;
+    } catch (err) {
+        body.innerHTML = `<span class="ai-brief-error">⚠ ${escapeHtml(err.message)}. Is Ollama running?</span>`;
+    } finally {
+        btn.disabled = false;
+        btn.textContent = "Analyze campaigns";
+    }
+}
+
+// ---------- RENDER ----------
 function renderCampaigns(campaigns, filtered = false) {
     if (!filtered) allCampaigns = campaigns;
 
@@ -337,6 +411,9 @@ function resetForm() {
     submitBtn.textContent   = "Create campaign";
     cancelBtn.style.display = "none";
     startDateInput.value    = todayISO();
+
+    const statusEl = document.getElementById("ai-brief-status");
+    if (statusEl) statusEl.style.display = "none";
 }
 
 cancelBtn.addEventListener("click", resetForm);

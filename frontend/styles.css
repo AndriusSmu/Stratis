@@ -832,3 +832,155 @@ body {
 .dot-Draft {
     background: var(--draft);
 }
+/* ─── AI ELEMENTS — append to styles.css ─── */
+
+/* AI badge pill */
+.ai-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 7px;
+    background: linear-gradient(135deg, rgba(14,165,233,0.2), rgba(129,140,248,0.2));
+    border: 1px solid rgba(14,165,233,0.3);
+    border-radius: 30px;
+    font-size: 0.62rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    color: var(--accent);
+    flex-shrink: 0;
+}
+
+/* ─── BRIEF GENERATOR (in form) ─── */
+.ai-brief-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--accent-dim);
+    border: 1px solid rgba(14,165,233,0.15);
+    border-radius: var(--radius-sm);
+    padding: 9px 12px;
+    margin-bottom: 14px;
+}
+
+.ai-brief-label {
+    font-size: 0.78rem;
+    color: var(--text-2);
+    flex: 1;
+}
+
+.btn-generate-brief {
+    padding: 5px 12px;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: var(--radius-sm);
+    font-family: var(--font-ui);
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.15s;
+    white-space: nowrap;
+}
+
+    .btn-generate-brief:hover {
+        opacity: 0.85;
+    }
+
+    .btn-generate-brief:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
+.ai-brief-status {
+    font-size: 0.78rem;
+    padding: 7px 10px;
+    border-radius: var(--radius-sm);
+    margin-bottom: 10px;
+}
+
+.ai-brief-loading {
+    color: var(--accent);
+    background: var(--accent-dim);
+    border: 1px solid rgba(14,165,233,0.15);
+}
+
+.ai-brief-success {
+    color: var(--active);
+    background: var(--active-bg);
+    border: 1px solid rgba(34,211,165,0.2);
+}
+
+.ai-brief-error {
+    color: var(--expired);
+    background: rgba(248,113,113,0.08);
+    border: 1px solid rgba(248,113,113,0.2);
+}
+
+/* ─── INSIGHTS (in sidebar) ─── */
+.ai-insights-block {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    background: var(--surface-2);
+    border: 1px solid var(--border-soft);
+    border-radius: var(--radius);
+    padding: 14px;
+}
+
+.ai-insights-header {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+}
+
+.ai-insights-title {
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--text-2);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+
+.ai-insights-body {
+    min-height: 40px;
+}
+
+.ai-insights-placeholder {
+    font-size: 0.75rem;
+    color: var(--text-3);
+    font-style: italic;
+}
+
+.ai-insights-loading {
+    font-size: 0.75rem;
+    color: var(--accent);
+}
+
+.ai-insights-text {
+    font-size: 0.78rem;
+    color: var(--text-2);
+    line-height: 1.55;
+}
+
+.btn-ai-insights {
+    width: 100%;
+    padding: 8px;
+    background: transparent;
+    border: 1px solid rgba(14,165,233,0.25);
+    border-radius: var(--radius-sm);
+    color: var(--accent);
+    font-family: var(--font-ui);
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+}
+
+    .btn-ai-insights:hover {
+        background: var(--accent-dim);
+        border-color: var(--accent);
+    }
+
+    .btn-ai-insights:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }

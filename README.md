@@ -1,6 +1,6 @@
 # 🎯 Stratis | Marketing Campaign Manager
 
-Stratis is a marketing campaign manager built with a FastAPI backend and a Vanilla JS frontend. It lets you create, track, and manage campaigns with real-time filtering and automatic budget calculations - no external frameworks, no third-party libraries.
+Stratis is a marketing campaign manager built with a FastAPI backend and a Vanilla JS frontend. It lets you create, track, and manage campaigns with real-time filtering, automatic budget calculations, and AI-powered campaign briefs — no external frameworks, no third-party dependencies.
 
 ---
 
@@ -42,8 +42,36 @@ INFO:     Uvicorn running on http://127.0.0.1:8000
 
 ### 2. Open the frontend
 
-- **Option A (Recommended):** Right-click `index.html` in VS Code → Open with Live Server
+- **Option A (Recommended):** Right-click `index.html` in VS Code → **Open with Live Server**
 - **Option B:** Double-click `index.html` to open it in your browser
+
+> ⚠️ If you use Option B, AI features won't work due to browser CORS restrictions. Use Live Server for full functionality.
+
+---
+
+## 🤖 AI Features (optional)
+
+Stratis includes two AI-powered features powered by [Ollama](https://ollama.com) running locally:
+
+- **Campaign brief generator** — enter a campaign name and target audience, click Generate, and AI fills in the description, tags, and notes
+- **Portfolio insights** — click "Analyze campaigns" in the sidebar to get an AI summary of your campaign portfolio health
+
+### Setup
+
+1. Download and install Ollama from [ollama.com](https://ollama.com)
+2. Pull the model:
+
+```bash
+ollama pull llama3.2
+```
+
+3. Ollama runs automatically in the background after installation. If needed, start it manually:
+
+```bash
+ollama serve
+```
+
+> AI features are optional. The app works fully without Ollama — AI buttons will show an error if Ollama is not running.
 
 ---
 
@@ -58,13 +86,18 @@ While the server is running, you can explore the API at:
 
 ## 📋 Campaign Fields
 
-| Field            | Type          | Required | Description                              |
-| :--------------- | :------------ | :------- | :--------------------------------------- |
-| name             | String        | Yes      | Campaign name (1–100 chars)              |
-| description      | String / Null | No       | Optional notes                           |
-| budget           | Float         | Yes      | Budget amount (must be > 0)              |
-| currency         | String        | Yes      | Currency code (default: USD)             |
-| start_date       | String (ISO)  | Yes      | Start date                               |
-| end_date         | String (ISO)  | No       | End date                                 |
-| target_audience  | String / Null | No       | Target audience description              |
-| status           | String        | Yes      | Draft, Active, Paused, or Completed      |
+| Field           | Type          | Required | Description                         |
+| :-------------- | :------------ | :------- | :---------------------------------- |
+| name            | String        | Yes      | Campaign name (1–100 chars)         |
+| description     | String / Null | No       | Optional description                |
+| budget          | Float         | Yes      | Budget amount (must be > 0)         |
+| spent           | Float         | No       | Amount already spent                |
+| currency        | String        | Yes      | USD, EUR, or GBP (default: USD)     |
+| start_date      | String (ISO)  | Yes      | Start date                          |
+| end_date        | String (ISO)  | No       | End date                            |
+| target_audience | String / Null | No       | Target audience description         |
+| status          | String        | Yes      | Draft, Active, Paused, or Completed |
+| owner           | String / Null | No       | Owner or responsible person         |
+| tags            | List / Null   | No       | Comma-separated tags                |
+| assets          | String / Null | No       | Links to briefs, creatives, etc.    |
+| notes           | String / Null | No       | Notes or results                    |
