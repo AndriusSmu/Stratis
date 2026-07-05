@@ -1,13 +1,14 @@
+# Database
+*.db
+*.sqlite3
 backend/campaigns.db
-*.db**/__pycache__/ 
-*.pyc 
-".vs/" 
+backend/data/
 
 # Python
 __pycache__/
 *.pyc
-*.db
-*.sqlite3
+*.pyo
+*.pyd
 .env
 venv/
 .venv/
@@ -15,6 +16,7 @@ venv/
 # IDE
 .vscode/
 .idea/
+.vs/
 
 # OS
 .DS_Store
@@ -22,3 +24,6 @@ Thumbs.db
 
 # Logs
 *.log
+
+# Test cache
+.pytest_cache/
