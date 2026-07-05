@@ -1,8 +1,9 @@
-﻿const API_URL =
-    window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"
-        ? "http://localhost:8000"
-        : window.location.origin.replace(/\/$/, "");
+﻿const API_URL = "http://localhost:8000";
 
+// Auth state
+let authToken = localStorage.getItem('authToken');
+
+// DOM Elements
 const form             = document.getElementById("campaign-form");
 const formTitle        = document.getElementById("form-title");
 const submitBtn        = document.getElementById("submit-btn");
@@ -37,20 +38,173 @@ const toastEl = document.getElementById("toast");
 let toastTimer;
 let allCampaigns = [];
 
+// ---------- AUTH FUNCTIONS ----------
+function showLoginForm() {
+    document.getElementById('login-form').style.display = 'block';
+    document.getElementById('register-form').style.display = 'none';
+    document.getElementById('user-info').style.display = 'none';
+    document.getElementById('login-username').value = '';
+    document.getElementById('login-password').value = '';
+}
+
+function showRegisterForm() {
+    document.getElementById('login-form').style.display = 'none';
+    document.getElementById('register-form').style.display = 'block';
+    document.getElementById('user-info').style.display = 'none';
+}
+
+async function login(username, password) {
+    const formData = new URLSearchParams();
+    formData.append('username', username);
+    formData.append('password', password);
+    
+    try {
+        const response = await fetch(`${API_URL}/auth/login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: formData
+        });
+        
+        if (!response.ok) {
+            const err = await response.json();
+            throw new Error(err.detail || 'Login failed');
+        }
+        const data = await response.json();
+        authToken = data.access_token;
+        localStorage.setItem('authToken', authToken);
+        showToast('Logged in successfully');
+        document.getElementById('login-form').style.display = 'none';
+        document.getElementById('register-form').style.display = 'none';
+        document.getElementById('user-info').style.display = 'block';
+        document.getElementById('user-name').textContent = username;
+        await refreshAll();
+        return true;
+    } catch (err) {
+        showToast(err.message, true);
+        return false;
+    }
+}
+
+async function register(email, username, password, fullName) {
+    try {
+        const response = await fetch(`${API_URL}/auth/register`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, username, password, full_name: fullName })
+        });
+        
+        if (!response.ok) {
+            const err = await response.json();
+            throw new Error(err.detail || 'Registration failed');
+        }
+        showToast('Registered successfully! Please login.');
+        return true;
+    } catch (err) {
+        showToast(err.message, true);
+        return false;
+    }
+}
+
+function logout() {
+    authToken = null;
+    localStorage.removeItem('authToken');
+    showToast('Logged out');
+    allCampaigns = [];
+    renderCampaigns([]);
+    document.getElementById('active-budget').textContent = '—';
+    document.getElementById('total-budget').textContent = '—';
+    document.getElementById('total-spent').textContent = '—';
+    document.querySelectorAll('.count-val').forEach(el => el.textContent = '0');
+    document.getElementById('statusChart').style.display = 'none';
+    document.getElementById('budgetChart').style.display = 'none';
+    showLoginForm();
+}
+
+async function handleLogin() {
+    const username = document.getElementById('login-username').value;
+    const password = document.getElementById('login-password').value;
+    if (!username || !password) {
+        showToast('Enter username and password', true);
+        return;
+    }
+    await login(username, password);
+}
+
+async function handleRegister() {
+    const email = document.getElementById('register-email').value;
+    const username = document.getElementById('register-username').value;
+    const password = document.getElementById('register-password').value;
+    const fullName = document.getElementById('register-fullname').value;
+    
+    if (!email || !username || !password) {
+        showToast('Fill all required fields', true);
+        return;
+    }
+    if (password.length < 8) {
+        showToast('Password must be at least 8 characters', true);
+        return;
+    }
+    
+    const success = await register(email, username, password, fullName);
+    if (success) {
+        showLoginForm();
+        document.getElementById('login-username').value = username;
+    }
+}
+
+function checkAuth() {
+    const token = localStorage.getItem('authToken');
+    if (token) {
+        authToken = token;
+        document.getElementById('login-form').style.display = 'none';
+        document.getElementById('register-form').style.display = 'none';
+        document.getElementById('user-info').style.display = 'block';
+        fetchAPI('/auth/me').then(user => {
+            document.getElementById('user-name').textContent = user.username || user.email || 'User';
+        }).catch(() => {
+            localStorage.removeItem('authToken');
+            authToken = null;
+            showLoginForm();
+        });
+        refreshAll();
+    } else {
+        showLoginForm();
+    }
+}
+
+// ---------- API FUNCTIONS ----------
 async function fetchAPI(endpoint, options = {}) {
+    const headers = { 
+        "Content-Type": "application/json",
+        ...(options.headers || {})
+    };
+    
+    if (authToken) {
+        headers["Authorization"] = `Bearer ${authToken}`;
+    }
+    
     const res = await fetch(`${API_URL}${endpoint}`, {
-        headers: { "Content-Type": "application/json", ...(options.headers || {}) },
+        headers: headers,
         ...options,
     });
+    
+    if (res.status === 401) {
+        localStorage.removeItem('authToken');
+        authToken = null;
+        allCampaigns = [];
+        renderCampaigns([]);
+        showToast('Session expired. Please login again.', true);
+        showLoginForm();
+        throw new Error('Not authenticated');
+    }
+    
     if (res.status === 204) return null;
     if (!res.ok) {
         let msg = "Request failed";
         try {
             const err = await res.json();
             if (err.detail) msg = err.detail;
-            else if (err.errors && Array.isArray(err.errors)) {
-                msg = err.errors.map(e => e.msg).join(", ");
-            }
+            else if (err.errors) msg = err.errors.map(e => e.msg).join(", ");
         } catch (_) {}
         throw new Error(msg);
     }
@@ -64,10 +218,10 @@ function showToast(msg, isError = false) {
     toastTimer = setTimeout(() => { toastEl.className = "toast"; }, 3000);
 }
 
+// ---------- STATS ----------
 async function loadStats() {
     try {
-        const stats = await fetchAPI("/campaigns/stats");
-
+        const stats = await fetchAPI("/dashboard/stats");
         activeBudgetEl.textContent = formatUSD(stats.active_budget_usd);
         totalBudgetEl.textContent  = formatUSD(stats.total_budget_usd);
         totalSpentEl.textContent   = formatUSD(stats.total_spent_usd);
@@ -86,8 +240,133 @@ async function loadStats() {
     } catch (_) {}
 }
 
-// ---------- AI: BRIEF GENERATOR ----------
-async function generateBrief() {
+// ---------- CHARTS ----------
+async function loadCharts() {
+    console.log("loadCharts called");
+    try {
+        const stats = await fetchAPI("/analytics/stats");
+        console.log("Analytics stats:", stats);
+        
+        if (!stats || !stats.campaign_count || stats.campaign_count < 2) {
+            console.log("Not enough campaigns for charts:", stats?.campaign_count || 0);
+            document.getElementById('statusChart').style.display = 'none';
+            document.getElementById('budgetChart').style.display = 'none';
+            return;
+        }
+        
+        document.getElementById('statusChart').style.display = 'block';
+        document.getElementById('budgetChart').style.display = 'block';
+        
+        const statusColors = {
+            'Draft': '#4d6070',
+            'Active': '#22d3a5',
+            'Paused': '#f59e0b',
+            'Completed': '#818cf8'
+        };
+        
+        // Status pie chart
+        const statusCtx = document.getElementById('statusChart').getContext('2d');
+        const statusData = stats.status_counts || {};
+        const statusLabels = Object.keys(statusData);
+        const statusValues = Object.values(statusData);
+        
+        new Chart(statusCtx, {
+            type: 'doughnut',
+            data: {
+                labels: statusLabels,
+                datasets: [{
+                    data: statusValues,
+                    backgroundColor: statusLabels.map(l => statusColors[l] || '#4d6070'),
+                    borderColor: '#0e1420',
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            color: '#8899aa',
+                            font: { size: 10 },
+                            boxWidth: 10,
+                            padding: 8
+                        }
+                    },
+                    title: {
+                        display: true,
+                        text: 'Campaign Status',
+                        color: '#e8edf5',
+                        font: { size: 12 }
+                    }
+                }
+            }
+        });
+        
+        // Budget by status chart
+        const budgetCtx = document.getElementById('budgetChart').getContext('2d');
+        const budgetData = stats.budget_by_status || {};
+        const budgetLabels = Object.keys(budgetData);
+        const budgetValues = Object.values(budgetData);
+        
+        new Chart(budgetCtx, {
+            type: 'bar',
+            data: {
+                labels: budgetLabels,
+                datasets: [{
+                    label: 'Budget (USD)',
+                    data: budgetValues,
+                    backgroundColor: budgetLabels.map(l => statusColors[l] || '#4d6070'),
+                    borderColor: '#0e1420',
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    title: {
+                        display: true,
+                        text: 'Budget by Status',
+                        color: '#e8edf5',
+                        font: { size: 12 }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            color: '#8899aa',
+                            font: { size: 9 }
+                        },
+                        grid: {
+                            color: '#1e2d42'
+                        }
+                    },
+                    x: {
+                        ticks: {
+                            color: '#8899aa',
+                            font: { size: 9 }
+                        },
+                        grid: {
+                            color: '#1e2d42'
+                        }
+                    }
+                }
+            }
+        });
+        console.log("Charts rendered successfully");
+    } catch (err) {
+        console.error("Chart error:", err);
+    }
+}
+
+// ---------- AI FUNCTIONS ----------
+window.generateBrief = async function() {
     const name = nameInput.value.trim();
     if (!name) {
         showToast("Enter a campaign name first.", true);
@@ -128,10 +407,9 @@ async function generateBrief() {
         btn.disabled = false;
         btn.textContent = "Generate";
     }
-}
+};
 
-// ---------- AI: INSIGHTS ----------
-async function runInsights() {
+window.runInsights = async function() {
     const btn = document.getElementById("btn-ai-insights");
     const body = document.getElementById("ai-insights-body");
 
@@ -157,7 +435,7 @@ async function runInsights() {
         btn.disabled = false;
         btn.textContent = "Analyze campaigns";
     }
-}
+};
 
 // ---------- RENDER ----------
 function renderCampaigns(campaigns, filtered = false) {
@@ -251,16 +529,18 @@ async function loadCampaigns() {
         renderCampaigns(data || []);
         applyFilters();
     } catch (err) {
-        campaignListDiv.innerHTML = `
-            <div class="empty-state">
-                <span class="empty-state-icon">⚠️</span>
-                Couldn't reach the backend.<br><small>${escapeHtml(err.message)}</small>
-            </div>`;
+        if (err.message !== 'Not authenticated') {
+            campaignListDiv.innerHTML = `
+                <div class="empty-state">
+                    <span class="empty-state-icon">⚠️</span>
+                    Couldn't reach the backend.<br><small>${escapeHtml(err.message)}</small>
+                </div>`;
+        }
     }
 }
 
 async function refreshAll() {
-    await Promise.all([loadCampaigns(), loadStats()]);
+    await Promise.all([loadCampaigns(), loadStats(), loadCharts()]);
 }
 
 function applyFilters() {
@@ -289,6 +569,7 @@ function debounce(fn, ms = 200) {
 statusFilter.addEventListener("change", applyFilters);
 searchFilter.addEventListener("input", debounce(applyFilters));
 
+// ---------- FORM ----------
 form.addEventListener("submit", async (e) => {
     e.preventDefault();
 
@@ -344,7 +625,8 @@ form.addEventListener("submit", async (e) => {
     }
 });
 
-async function editCampaign(id) {
+// ---------- CAMPAIGN ACTIONS ----------
+window.editCampaign = async function(id) {
     try {
         const c = await fetchAPI(`/campaigns/${id}`);
         campaignIdInput.value      = c.id;
@@ -370,9 +652,9 @@ async function editCampaign(id) {
     } catch (err) {
         showToast(err.message, true);
     }
-}
+};
 
-async function cloneCampaign(id) {
+window.cloneCampaign = async function(id) {
     try {
         await fetchAPI(`/campaigns/${id}/duplicate`, { method: "POST" });
         showToast("Campaign duplicated as Draft.");
@@ -381,9 +663,9 @@ async function cloneCampaign(id) {
     } catch (err) {
         showToast(err.message, true);
     }
-}
+};
 
-async function deleteCampaign(id) {
+window.deleteCampaign = async function(id) {
     if (!confirm("Delete this campaign? This cannot be undone.")) return;
     try {
         await fetchAPI(`/campaigns/${id}`, { method: "DELETE" });
@@ -392,18 +674,30 @@ async function deleteCampaign(id) {
     } catch (err) {
         showToast(err.message, true);
     }
-}
+};
 
-function exportCSV() {
+// ---------- EXPORT FUNCTIONS ----------
+window.exportCSV = function() {
     const a = document.createElement("a");
-    a.href = `${API_URL}/campaigns/export`;
+    a.href = `${API_URL}/export/csv`;
     a.download = "";
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     showToast("Downloading CSV...");
-}
+};
 
+window.exportExcel = function() {
+    const a = document.createElement("a");
+    a.href = `${API_URL}/export/excel`;
+    a.download = "";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    showToast("Downloading Excel...");
+};
+
+// ---------- UTILITY ----------
 function resetForm() {
     form.reset();
     campaignIdInput.value   = "";
@@ -438,5 +732,6 @@ function escapeHtml(str) {
     return d.innerHTML;
 }
 
+// ---------- INIT ----------
 startDateInput.value = todayISO();
-refreshAll();
+checkAuth();

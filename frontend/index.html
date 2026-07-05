@@ -8,6 +8,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,700;1,9..40,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css" />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
 
@@ -22,6 +23,51 @@
                 <span class="brand-name">Stratis</span>
             </div>
 
+            <!-- AUTH SECTION -->
+            <div id="auth-section">
+                <div id="login-form">
+                    <div class="field">
+                        <label>Username</label>
+                        <input type="text" id="login-username" placeholder="username" />
+                    </div>
+                    <div class="field">
+                        <label>Password</label>
+                        <input type="password" id="login-password" placeholder="password" />
+                    </div>
+                    <button class="btn btn-primary" onclick="handleLogin()" style="width:100%;">Login</button>
+                    <button class="btn btn-ghost" onclick="showRegisterForm()" style="width:100%;margin-top:8px;">Register</button>
+                </div>
+                
+                <div id="register-form" style="display: none;">
+                    <div class="field">
+                        <label>Email</label>
+                        <input type="email" id="register-email" placeholder="email@example.com" />
+                    </div>
+                    <div class="field">
+                        <label>Username</label>
+                        <input type="text" id="register-username" placeholder="username" />
+                    </div>
+                    <div class="field">
+                        <label>Full Name</label>
+                        <input type="text" id="register-fullname" placeholder="Full Name" />
+                    </div>
+                    <div class="field">
+                        <label>Password</label>
+                        <input type="password" id="register-password" placeholder="password (min 8 chars)" />
+                    </div>
+                    <button class="btn btn-primary" onclick="handleRegister()" style="width:100%;">Register</button>
+                    <button class="btn btn-ghost" onclick="showLoginForm()" style="width:100%;margin-top:8px;">Back to Login</button>
+                </div>
+                
+                <div id="user-info" style="display: none;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border);">
+                        <span id="user-name" style="color:var(--text);font-size:0.9rem;">User</span>
+                        <button class="btn btn-ghost" onclick="logout()" style="padding:4px 12px;font-size:0.75rem;">Logout</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- STATS -->
             <div class="sidebar-stats">
                 <div class="stat-row">
                     <span class="stat-label">Active budget</span>
@@ -46,6 +92,16 @@
                 </div>
             </div>
 
+                        <!-- Charts -->
+            <div class="chart-section">
+                <div class="chart-container">
+                    <canvas id="statusChart"></canvas>
+                </div>
+                <div class="chart-container">
+                    <canvas id="budgetChart"></canvas>
+                </div>
+            </div>
+
             <div class="expired-warning" id="expired-warning" style="display:none;">
                 <span class="warn-icon">⚠</span>
                 <span id="expired-text">campaigns may be expired</span>
@@ -65,7 +121,7 @@
                 </button>
             </div>
 
-            <button class="btn-export" onclick="exportCSV()">
+            <button class="btn-export" onclick="exportCSV()" style="margin-top:8px;">
                 Export CSV
             </button>
 

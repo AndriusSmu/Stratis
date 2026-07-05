@@ -2,3 +2,23 @@ backend/campaigns.db
 *.db**/__pycache__/ 
 *.pyc 
 ".vs/" 
+
+# Python
+__pycache__/
+*.pyc
+*.db
+*.sqlite3
+.env
+venv/
+.venv/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
